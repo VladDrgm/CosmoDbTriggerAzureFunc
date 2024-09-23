@@ -1,0 +1,43 @@
+name: Deploy Terraform Infrastructure
+
+on:
+  push:
+    paths:
+      - 'CosmoDbTrigger/Infra/**'
+
+jobs:
+  terraform:
+    name: Terraform Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.9.6
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Initialize Terraform
+        run: terraform init
+        working-directory: ./CosmoDbTrigger/Infra
+
+      - name: Validate Terraform
+        run: terraform validate
+        working-directory: ./CosmoDbTrigger/Infra
+
+      - name: Plan Terraform Changes
+        id: plan
+        run: terraform plan -out=terraform.plan
+        working-directory: ./CosmoDbTrigger/Infra
+
+      - name: Apply Terraform Changes
+        if: github.ref == 'refs/heads/main' # Only deploy on the main branch
+        run: terraform apply -auto-approve terraform.plan
+        working-directory: ./CosmoDbTrigger/Infra
